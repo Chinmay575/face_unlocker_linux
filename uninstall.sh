@@ -111,8 +111,11 @@ echo -e "${GREEN}✓ Command-line tools removed${NC}\n"
 
 # Remove installation directory
 echo "Removing application files..."
+echo -e "  → Removing Python files from $INSTALL_DIR"
+echo -e "  → Removing AI model (~250MB) from $INSTALL_DIR/models"
+echo -e "  → Removing all application data"
 rm -rf "$INSTALL_DIR"
-echo -e "${GREEN}✓ Application files removed${NC}\n"
+echo -e "${GREEN}✓ Application files and AI model removed${NC}\n"
 
 # Ask about user data
 if [ -d "$DATA_DIR" ]; then

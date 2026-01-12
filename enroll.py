@@ -6,6 +6,10 @@ import argparse
 from pathlib import Path
 from face_embedder import FaceEmbedder
 
+# Set environment variables before importing cv2 to prevent Qt issues
+os.environ['QT_QPA_PLATFORM'] = 'xcb'
+os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = ''
+
 # Configuration
 SAVE_DIR = "/var/lib/faceunlock"
 MODEL = "/opt/faceunlock/models/arcfaceresnet100-8.onnx"
