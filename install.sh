@@ -34,7 +34,7 @@ show_progress() {
 }
 
 echo -e "\n${BLUE}╔════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║     Face Unlock Installation Script           ║${NC}"
+echo -e "${BLUE}║     Face Unlock Installation Script            ║${NC}"
 echo -e "${BLUE}║     Automated Linux Face Authentication        ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════╝${NC}\n"
 
@@ -223,26 +223,20 @@ else
     MODEL_PATH="$INSTALL_DIR/models/arcfaceresnet100-8.onnx"
     
     if command -v curl &> /dev/null; then
-        # Use curl with progress bar
-        curl -L --progress-bar -o "$MODEL_PATH" "$MODEL_URL" 2>&1 | \
-        while IFS= read -r line; do
-            echo -ne "\r  ${CYAN}→${NC} Progress: $line"
-        done
-        DOWNLOAD_STATUS=${PIPESTATUS[0]}
-        echo ""
+        # Use curl with simple progress bar (shows percentage and speed)
+        echo -e "  ${CYAN}→${NC} Starting download..."
+        curl -L -# -o "$MODEL_PATH" "$MODEL_URL"
+        DOWNLOAD_STATUS=$?
     elif command -v wget &> /dev/null; then
         # Use wget with progress bar
-        wget --progress=bar:force -O "$MODEL_PATH" "$MODEL_URL" 2>&1 | \
-        grep -oP '\d+%' | \
-        while IFS= read -r percent; do
-            echo -ne "\r  ${CYAN}→${NC} Downloading: $percent"
-        done
-        DOWNLOAD_STATUS=${PIPESTATUS[0]}
-        echo ""
+        echo -e "  ${CYAN}→${NC} Starting download..."
+        wget --progress=bar:force:noscroll -O "$MODEL_PATH" "$MODEL_URL"
+        DOWNLOAD_STATUS=$?
     else
         echo -e "  ${RED}✗${NC} Neither curl nor wget found. Please install one of them."
         exit 1
     fi
+    echo ""
     
     # Verify download
     if [ $DOWNLOAD_STATUS -eq 0 ] && [ -f "$MODEL_PATH" ]; then
