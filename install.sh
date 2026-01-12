@@ -180,6 +180,50 @@ fi
 
 echo -e "${GREEN}✓ Python dependencies installed${NC}\n"
 
+# Download AI model if not present
+echo "Checking for AI model..."
+mkdir -p "$INSTALL_DIR/models"
+
+if [ -f "$INSTALL_DIR/models/arcfaceresnet100-8.onnx" ]; then
+    echo -e "${GREEN}✓ AI model already exists${NC}\n"
+else
+    echo "Downloading ArcFace ResNet100 model (~250MB, this may take a few minutes)..."
+    
+    MODEL_URL="https://media.githubusercontent.com/media/onnx/models/refs/heads/main/validated/vision/body_analysis/arcface/model/arcfaceresnet100-8.onnx?download=true"
+    MODEL_PATH="$INSTALL_DIR/models/arcfaceresnet100-8.onnx"
+    
+    if command -v curl &> /dev/null; then
+        curl -L --progress-bar -o "$MODEL_PATH" "$MODEL_URL"
+        DOWNLOAD_STATUS=$?
+    elif command -v wget &> /dev/null; then
+        wget --show-progress -O "$MODEL_PATH" "$MODEL_URL"
+        DOWNLOAD_STATUS=$?
+    else
+        echo -e "${RED}Error: Neither curl nor wget found. Please install one of them.${NC}"
+        exit 1
+    fi
+    
+    # Verify download
+    if [ $DOWNLOAD_STATUS -eq 0 ] && [ -f "$MODEL_PATH" ]; then
+        # Verify file size (should be around 250MB)
+        FILE_SIZE=$(stat -c%s "$MODEL_PATH" 2>/dev/null || stat -f%z "$MODEL_PATH" 2>/dev/null)
+        if [ -n "$FILE_SIZE" ] && [ "$FILE_SIZE" -gt 100000000 ]; then
+            SIZE_MB=$(awk "BEGIN {printf \"%.1f\", $FILE_SIZE/1048576}")
+            echo -e "${GREEN}✓ AI model downloaded successfully (${SIZE_MB}MB)${NC}\n"
+        else
+            echo -e "${RED}Error: Downloaded model file seems too small or invalid${NC}"
+            rm -f "$MODEL_PATH"
+            exit 1
+        fi
+    else
+        echo -e "${RED}Error: Failed to download AI model${NC}"
+        echo -e "${YELLOW}You can manually download it from:${NC}"
+        echo -e "${YELLOW}https://github.com/onnx/models/tree/main/validated/vision/body_analysis/arcface${NC}"
+        echo -e "${YELLOW}and place it at: $MODEL_PATH${NC}"
+        exit 1
+    fi
+fi
+
 # Compile and install PAM module
 echo "Compiling PAM module..."
 

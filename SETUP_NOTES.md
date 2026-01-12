@@ -4,11 +4,11 @@
 
 The following files are not tracked in git and need to be obtained separately:
 
-### 1. AI Model (Required)
+### 1. AI Model (Automatically Downloaded)
 - **File**: `models/arcfaceresnet100-8.onnx`
 - **Purpose**: Face recognition model for generating embeddings
-- **Download from**: [ONNX Model Zoo](https://github.com/onnx/models/tree/main/validated/vision/body_analysis/arcface)
-- **Action**: Create `models/` directory and place the model file there
+- **Size**: ~250MB
+- **Action**: ✅ **Automatically downloaded** during installation from [ONNX Model Zoo](https://github.com/onnx/models/tree/main/validated/vision/body_analysis/arcface)
 
 ### 2. User Enrollment Data (Generated)
 - **Directory**: `faceunlock/`
@@ -26,20 +26,26 @@ The following files are not tracked in git and need to be obtained separately:
 - **Purpose**: Python bytecode cache
 - **Action**: Automatically created by Python, no action needed
 
-## Before Installation
+## Installation
 
-1. **Download the AI model**:
-   ```bash
-   mkdir -p models/
-   # Download arcfaceresnet100-8.onnx to models/ directory
-   ```
+Simply run the installer - it handles everything automatically:
 
-2. **Run the installer**:
+1. **Run the installer**:
    ```bash
    sudo ./install.sh
    ```
+   
+   The installer will:
+   - ✅ Detect your Linux distribution
+   - ✅ Install system dependencies
+   - ✅ Install Python packages
+   - ✅ Download the AI model (~250MB)
+   - ✅ Compile the PAM module
+   - ✅ Install systemd service
+   - ✅ Create command-line tools
+   - ✅ Set up directories and permissions
 
-3. **Enroll users**:
+2. **Enroll users**:
    ```bash
    sudo faceunlock-enroll <username>
    ```
