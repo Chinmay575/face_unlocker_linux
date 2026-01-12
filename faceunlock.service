@@ -1,0 +1,20 @@
+[Unit]
+Description=Face Unlock Authentication Daemon
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/media/chinmay/Development/Project_Horizon/face_unlock_linux
+ExecStart=/usr/bin/python3 /media/chinmay/Development/Project_Horizon/face_unlock_linux/face_daemon.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+PrivateTmp=yes
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

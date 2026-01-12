@@ -1,0 +1,49 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+venv/
+env/
+ENV/
+.Python
+
+# User data and models
+models/
+faceunlock/
+*.npy
+
+# Build artifacts
+*.o
+*.so
+*.a
+pam_faceunlock.so
+
+# Log files
+*.log
+/var/log/faceunlock.log
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# System files
+Thumbs.db
+.cache/
+
+# Test and temporary files
+test_data/
+tmp/
+temp/
+*.tmp
+
+# Configuration files with sensitive data (optional, uncomment if needed)
+# config.ini
