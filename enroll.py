@@ -1,14 +1,26 @@
-import cv2
-import numpy as np
 import os
 import sys
+
+# Set environment variables BEFORE importing cv2 to prevent Qt issues
+# First import cv2 to check for bundled Qt plugins
+import cv2
+
+# Use OpenCV's bundled Qt plugins if available
+cv2_path = os.path.dirname(cv2.__file__)
+qt_plugin_path = os.path.join(cv2_path, 'qt', 'plugins')
+if os.path.exists(qt_plugin_path):
+    os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = qt_plugin_path
+else:
+    # Fallback: unset to let Qt use system plugins
+    if 'QT_QPA_PLATFORM_PLUGIN_PATH' in os.environ:
+        del os.environ['QT_QPA_PLATFORM_PLUGIN_PATH']
+
+# Try to use xcb platform for X11
+os.environ['QT_QPA_PLATFORM'] = 'xcb'
+import numpy as np
 import argparse
 from pathlib import Path
 from face_embedder import FaceEmbedder
-
-# Set environment variables before importing cv2 to prevent Qt issues
-os.environ['QT_QPA_PLATFORM'] = 'xcb'
-os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = ''
 
 # Configuration
 SAVE_DIR = "/var/lib/faceunlock"

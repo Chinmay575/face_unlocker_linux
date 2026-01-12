@@ -395,7 +395,12 @@ fi
 export DISPLAY="$DISPLAY"
 export XAUTHORITY="$XAUTHORITY_FILE"
 export QT_QPA_PLATFORM=xcb
-export QT_QPA_PLATFORM_PLUGIN_PATH=""
+
+# Set Qt to use OpenCV's bundled plugins if available
+CV2_QT_PLUGINS=$(python3 -c 'import cv2, os; print(os.path.join(os.path.dirname(cv2.__file__), "qt", "plugins"))' 2>/dev/null)
+if [ -d "$CV2_QT_PLUGINS" ]; then
+    export QT_QPA_PLATFORM_PLUGIN_PATH="$CV2_QT_PLUGINS"
+fi
 
 # Grant X11 access temporarily
 if command -v xhost &> /dev/null; then
@@ -405,10 +410,13 @@ fi
 # Run as the original user to preserve X11 access for GUI
 if [ -n "$SUDO_USER" ]; then
     sudo -u "$SUDO_USER" DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY_FILE" \
-         QT_QPA_PLATFORM=xcb QT_QPA_PLATFORM_PLUGIN_PATH="" \
+         QT_QPA_PLATFORM=xcb \
+         QT_QPA_PLATFORM_PLUGIN_PATH="${QT_QPA_PLATFORM_PLUGIN_PATH:-}" \
          python3 /opt/faceunlock/enroll.py "$1"
     EXIT_CODE=$?
 else
+    QT_QPA_PLATFORM=xcb \
+    QT_QPA_PLATFORM_PLUGIN_PATH="${QT_QPA_PLATFORM_PLUGIN_PATH:-}" \
     python3 /opt/faceunlock/enroll.py "$1"
     EXIT_CODE=$?
 fi
