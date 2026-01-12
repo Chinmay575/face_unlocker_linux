@@ -40,12 +40,8 @@ for file in $REQUIRED_FILES; do
     fi
 done
 
-if [ ! -d "models" ] || [ ! -f "models/arcfaceresnet100-8.onnx" ]; then
-    echo -e "${RED}Error: models/arcfaceresnet100-8.onnx not found${NC}"
-    exit 1
-fi
-
-echo -e "${GREEN}✓ All required files present${NC}\n"
+echo -e "${GREEN}✓ All required source files present${NC}"
+echo -e "${YELLOW}Note: AI model will be downloaded automatically if not present${NC}\n"
 
 # Detect OS and distribution
 echo "Detecting operating system..."
@@ -130,11 +126,6 @@ cp face_daemon.py face_embedder.py enroll.py "$INSTALL_DIR/"
 cp requirements.txt "$INSTALL_DIR/"
 chmod 755 "$INSTALL_DIR"/*.py
 echo -e "${GREEN}✓ Python files installed${NC}\n"
-
-# Copy models
-echo "Installing AI models..."
-cp models/arcfaceresnet100-8.onnx "$INSTALL_DIR/models/"
-echo -e "${GREEN}✓ Models installed${NC}\n"
 
 # Install Python dependencies
 echo "Installing Python dependencies (this may take a moment)..."
