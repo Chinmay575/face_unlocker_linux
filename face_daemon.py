@@ -20,9 +20,13 @@ TIMEOUT = 5.0  # Increased timeout for better accuracy
 MAX_ATTEMPTS = 30  # Maximum frame attempts
 LOG_FILE = "/var/log/faceunlock.log"
 
+# Check if verbose logging is enabled via environment variable
+VERBOSE = os.environ.get('FACEUNLOCK_VERBOSE', '0') == '1'
+LOG_LEVEL = logging.DEBUG if VERBOSE else logging.INFO
+
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=LOG_LEVEL,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
         logging.FileHandler(LOG_FILE) if os.access('/var/log', os.W_OK) else logging.StreamHandler(),
@@ -30,6 +34,22 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+if VERBOSE:
+    logger.debug("=" * 70)
+    logger.debug("Face Unlock Daemon Starting - VERBOSE MODE ENABLED")
+    logger.debug("=" * 70)
+    logger.debug(f"Python version: {sys.version}")
+    logger.debug(f"OpenCV version: {cv2.__version__}")
+    logger.debug(f"Configuration:")
+    logger.debug(f"  SOCKET: {SOCKET}")
+    logger.debug(f"  MODEL: {MODEL}")
+    logger.debug(f"  DATA_DIR: {DATA_DIR}")
+    logger.debug(f"  THRESHOLD: {THRESHOLD}")
+    logger.debug(f"  TIMEOUT: {TIMEOUT}s")
+    logger.debug(f"  MAX_ATTEMPTS: {MAX_ATTEMPTS}")
+    logger.debug(f"  LOG_FILE: {LOG_FILE}")
+    logger.debug("=" * 70)
 
 # Global resources
 embedder = None

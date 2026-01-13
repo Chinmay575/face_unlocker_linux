@@ -7,6 +7,8 @@ Type=simple
 User=root
 WorkingDirectory=/media/chinmay/Development/Project_Horizon/face_unlock_linux
 ExecStart=/usr/bin/python3 /media/chinmay/Development/Project_Horizon/face_unlock_linux/face_daemon.py
+# To enable verbose logging, uncomment the line below and reload the service:
+# Environment="FACEUNLOCK_VERBOSE=1"
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

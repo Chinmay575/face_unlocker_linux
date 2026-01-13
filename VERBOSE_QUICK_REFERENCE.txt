@@ -1,0 +1,120 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║               📊 VERBOSE LOGGING QUICK REFERENCE                     ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ BASH SCRIPTS - Add -v or --verbose flag                              │
+└──────────────────────────────────────────────────────────────────────┘
+
+  Installation:
+    $ sudo ./install.sh --verbose
+
+  Uninstallation:
+    $ sudo ./uninstall.sh -v
+
+  Emergency Disable:
+    $ sudo ./emergency_disable.sh --verbose
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ PYTHON ENROLLMENT - Add -v or --verbose flag                         │
+└──────────────────────────────────────────────────────────────────────┘
+
+  Via wrapper command (recommended):
+    $ sudo faceunlock-enroll username --verbose
+
+  Direct (not recommended):
+    $ sudo python3 /opt/faceunlock/enroll.py username --verbose
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ DAEMON - Set environment variable FACEUNLOCK_VERBOSE=1               │
+└──────────────────────────────────────────────────────────────────────┘
+
+  Temporary (run manually):
+    $ sudo systemctl stop faceunlock.service
+    $ sudo FACEUNLOCK_VERBOSE=1 python3 /opt/faceunlock/face_daemon.py
+
+  Persistent (via systemd):
+    1. Edit: sudo nano /etc/systemd/system/faceunlock.service
+    2. Uncomment: Environment="FACEUNLOCK_VERBOSE=1"
+    3. Reload: sudo systemctl daemon-reload
+    4. Restart: sudo systemctl restart faceunlock.service
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ VIEW LOGS                                                             │
+└──────────────────────────────────────────────────────────────────────┘
+
+  Daemon logs (real-time):
+    $ sudo journalctl -u faceunlock.service -f
+
+  Daemon logs (last 100 lines):
+    $ sudo journalctl -u faceunlock.service -n 100
+
+  Save output to file:
+    $ sudo ./install.sh --verbose 2>&1 | tee install.log
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ WHAT YOU'LL SEE                                                       │
+└──────────────────────────────────────────────────────────────────────┘
+
+  Bash Scripts:
+    ✓ [VERBOSE] prefix on debug messages
+    ✓ Every command shown with '+ command' prefix
+    ✓ Configuration paths and values
+    ✓ Exit codes and command results
+
+  Python Scripts:
+    ✓ DEBUG: prefix on debug messages
+    ✓ Python/OpenCV versions
+    ✓ Qt plugin discovery details
+    ✓ Camera initialization steps
+    ✓ Face detection frame-by-frame
+    ✓ Embedding generation progress
+
+  Daemon:
+    ✓ Detailed startup banner with config
+    ✓ Each authentication attempt logged
+    ✓ Similarity scores for comparisons
+    ✓ Socket communication details
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ COMMON DEBUGGING SCENARIOS                                            │
+└──────────────────────────────────────────────────────────────────────┘
+
+  Installation problems:
+    $ sudo ./install.sh --verbose 2>&1 | tee install.log
+
+  Enrollment not working:
+    $ sudo faceunlock-enroll username --verbose 2>&1 | tee enroll.log
+
+  Authentication failing:
+    $ sudo nano /etc/systemd/system/faceunlock.service
+    # Uncomment: Environment="FACEUNLOCK_VERBOSE=1"
+    $ sudo systemctl daemon-reload
+    $ sudo systemctl restart faceunlock.service
+    $ sudo journalctl -u faceunlock.service -f
+
+  Camera detection issues:
+    $ sudo faceunlock-enroll test --verbose 2>&1 | grep -i qt
+
+
+┌──────────────────────────────────────────────────────────────────────┐
+│ DISABLE VERBOSE LOGGING                                               │
+└──────────────────────────────────────────────────────────────────────┘
+
+  Bash scripts: Simply remove -v or --verbose flag
+
+  Daemon: Comment out environment line in systemd service:
+    $ sudo nano /etc/systemd/system/faceunlock.service
+    # Comment: # Environment="FACEUNLOCK_VERBOSE=1"
+    $ sudo systemctl daemon-reload
+    $ sudo systemctl restart faceunlock.service
+
+
+╔══════════════════════════════════════════════════════════════════════╗
+║  📖 Full documentation: VERBOSE_LOGGING.md                           ║
+╚══════════════════════════════════════════════════════════════════════╝

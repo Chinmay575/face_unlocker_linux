@@ -1,9 +1,21 @@
 #!/bin/bash
 
 # Face Unlock Installation Script
-# Run with: sudo ./install.sh
+# Run with: sudo ./install.sh [-v|--verbose]
 
 set -e  # Exit on error
+
+# Parse arguments
+VERBOSE=false
+for arg in "$@"; do
+    case $arg in
+        -v|--verbose)
+            VERBOSE=true
+            set -x  # Enable bash debug mode
+            shift
+            ;;
+    esac
+done
 
 # Colors
 RED='\033[0;31m'
@@ -14,6 +26,13 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m' # No Color
 
+# Logging function
+log_verbose() {
+    if [ "$VERBOSE" = true ]; then
+        echo -e "${CYAN}[VERBOSE]${NC} $1"
+    fi
+}
+
 # Configuration
 INSTALL_DIR="/opt/faceunlock"
 DATA_DIR="/var/lib/faceunlock"
@@ -21,6 +40,11 @@ PAM_MODULE_DIR="/lib/security"
 SYSTEMD_DIR="/etc/systemd/system"
 BIN_DIR="/usr/local/bin"
 LOG_DIR="/var/log"
+
+log_verbose "Verbose logging enabled"
+log_verbose "Install directory: $INSTALL_DIR"
+log_verbose "Data directory: $DATA_DIR"
+log_verbose "Running as: $(whoami)"
 
 # Progress tracking
 TOTAL_STEPS=11
@@ -42,6 +66,140 @@ echo -e "${BLUE}╚════════════════════�
 if [ "$EUID" -ne 0 ]; then 
     echo -e "${RED}Error: Please run as root (sudo ./install.sh)${NC}"
     exit 1
+fi
+
+# Check if already installed and ask user
+if [ -d "$INSTALL_DIR" ] || [ -f "$SYSTEMD_DIR/faceunlock.service" ]; then
+    echo -e "${YELLOW}╔════════════════════════════════════════════════╗${NC}"
+    echo -e "${YELLOW}║  Existing installation detected                ║${NC}"
+    echo -e "${YELLOW}╚════════════════════════════════════════════════╝${NC}\n"
+    
+    # Count enrolled users if data directory exists
+    if [ -d "$DATA_DIR" ] && ls "$DATA_DIR"/*.npy 1> /dev/null 2>&1; then
+        ENROLLED_USERS=$(ls -1 "$DATA_DIR"/*.npy 2>/dev/null | wc -l)
+        echo -e "${CYAN}Found $ENROLLED_USERS enrolled user(s):${NC}"
+        ls -1 "$DATA_DIR"/*.npy 2>/dev/null | xargs -n1 basename | sed 's/.npy//' | sed 's/^/  - /'
+        echo ""
+    fi
+    
+    echo -e "${YELLOW}What would you like to do?${NC}"
+    echo -e "  ${GREEN}1)${NC} Clean re-install (remove old installation, ${BOLD}keep user data${NC})"
+    echo -e "  ${YELLOW}2)${NC} Skip installation (exit without changes)"
+    echo -e "  ${RED}3)${NC} Full uninstall (remove everything including user data)"
+    echo ""
+    read -p "Enter choice [1-3]: " -n 1 -r INSTALL_CHOICE
+    echo ""
+    
+    case $INSTALL_CHOICE in
+        1)
+            echo -e "\n${GREEN}→ Proceeding with clean re-install (preserving user data)...${NC}\n"
+            log_verbose "User chose: Clean re-install"
+            ;;
+        2)
+            echo -e "\n${YELLOW}✓ Installation skipped. Existing installation unchanged.${NC}"
+            log_verbose "User chose: Skip installation"
+            exit 0
+            ;;
+        3)
+            echo -e "\n${RED}→ Performing full uninstall...${NC}\n"
+            log_verbose "User chose: Full uninstall"
+            # Run the uninstall script if it exists
+            if [ -f "./uninstall.sh" ]; then
+                bash ./uninstall.sh
+            else
+                echo -e "${RED}Error: uninstall.sh not found${NC}"
+            fi
+            exit 0
+            ;;
+        *)
+            echo -e "\n${RED}Invalid choice. Installation cancelled.${NC}"
+            exit 1
+            ;;
+    esac
+    
+    log_verbose "Existing installation found, performing automatic uninstall"
+    
+    # Detect OS for PAM module location
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS_ID=$ID
+    fi
+    
+    # Detect PAM library location based on OS
+    case "$OS_ID" in
+        ubuntu|debian|linuxmint|pop)
+            PAM_MODULE_DIR_AUTO="/lib/x86_64-linux-gnu/security"
+            if [ ! -d "$PAM_MODULE_DIR_AUTO" ]; then
+                PAM_MODULE_DIR_AUTO="/lib/security"
+            fi
+            ;;
+        fedora|rhel|centos|rocky|almalinux)
+            if [ "$(uname -m)" = "x86_64" ]; then
+                PAM_MODULE_DIR_AUTO="/lib64/security"
+            else
+                PAM_MODULE_DIR_AUTO="/lib/security"
+            fi
+            ;;
+        arch|manjaro)
+            PAM_MODULE_DIR_AUTO="/usr/lib/security"
+            ;;
+        opensuse*|sles)
+            if [ "$(uname -m)" = "x86_64" ]; then
+                PAM_MODULE_DIR_AUTO="/lib64/security"
+            else
+                PAM_MODULE_DIR_AUTO="/lib/security"
+            fi
+            ;;
+        *)
+            PAM_MODULE_DIR_AUTO="/lib/security"
+            ;;
+    esac
+    
+    # Stop and disable service
+    echo -e "  ${CYAN}→${NC} Stopping face unlock service..."
+    systemctl stop faceunlock.service 2>/dev/null || true
+    systemctl disable faceunlock.service 2>/dev/null || true
+    log_verbose "Service stopped and disabled"
+    
+    # Remove systemd service
+    echo -e "  ${CYAN}→${NC} Removing systemd service..."
+    rm -f "$SYSTEMD_DIR/faceunlock.service"
+    systemctl daemon-reload 2>/dev/null || true
+    log_verbose "Systemd service removed"
+    
+    # Remove PAM module
+    echo -e "  ${CYAN}→${NC} Removing PAM module..."
+    rm -f "$PAM_MODULE_DIR_AUTO/pam_faceunlock.so"
+    rm -f "/lib/security/pam_faceunlock.so"
+    rm -f "/lib64/security/pam_faceunlock.so"
+    rm -f "/usr/lib/security/pam_faceunlock.so"
+    rm -f "/lib/x86_64-linux-gnu/security/pam_faceunlock.so"
+    log_verbose "PAM module removed"
+    
+    # Remove command-line tools
+    echo -e "  ${CYAN}→${NC} Removing command-line tools..."
+    rm -f "$BIN_DIR/faceunlock-enroll"
+    rm -f "$BIN_DIR/faceunlock-service"
+    rm -f "$BIN_DIR/faceunlock-list"
+    rm -f "$BIN_DIR/faceunlock-remove"
+    log_verbose "Command-line tools removed"
+    
+    # Preserve user data but remove application files
+    if [ -d "$DATA_DIR" ] && ls "$DATA_DIR"/*.npy 1> /dev/null 2>&1; then
+        ENROLLED_USERS=$(ls -1 "$DATA_DIR"/*.npy 2>/dev/null | wc -l)
+        echo -e "  ${GREEN}✓${NC} Preserving $ENROLLED_USERS enrolled user(s) in $DATA_DIR"
+        log_verbose "User data preserved: $(ls "$DATA_DIR"/*.npy 2>/dev/null | xargs -n1 basename | sed 's/.npy//' | tr '\n' ', ')"
+    fi
+    
+    # Remove installation directory (application files, venv, models)
+    echo -e "  ${CYAN}→${NC} Removing old installation files..."
+    rm -rf "$INSTALL_DIR"
+    log_verbose "Installation directory removed: $INSTALL_DIR"
+    
+    echo -e "${GREEN}✓ Clean uninstall completed (user data preserved)${NC}\n"
+    
+    # Small delay for visual feedback
+    sleep 1
 fi
 
 # Check required files
@@ -160,51 +318,56 @@ cp requirements.txt "$INSTALL_DIR/"
 chmod 755 "$INSTALL_DIR"/*.py
 echo -e "${GREEN}✓ Python files installed${NC}"
 
+# Create Python virtual environment
+show_progress "Creating Python virtual environment"
+VENV_DIR="$INSTALL_DIR/venv"
+
+log_verbose "Creating virtual environment at: $VENV_DIR"
+echo -e "  ${CYAN}→${NC} Creating virtual environment..."
+
+# Ensure python3-venv is installed
+case "$OS_ID" in
+    ubuntu|debian|linuxmint|pop)
+        if ! dpkg -l | grep -q python3-venv; then
+            echo -e "  ${YELLOW}ℹ${NC}  Installing python3-venv package..."
+            apt-get install -y python3-venv > /dev/null 2>&1
+        fi
+        ;;
+    fedora|rhel|centos|rocky|almalinux)
+        # python3-venv is usually included, but check for python3-devel
+        if command -v dnf &> /dev/null; then
+            dnf install -y python3-devel > /dev/null 2>&1 || true
+        else
+            yum install -y python3-devel > /dev/null 2>&1 || true
+        fi
+        ;;
+esac
+
+# Create the virtual environment
+python3 -m venv "$VENV_DIR"
+log_verbose "Virtual environment created successfully"
+
+# Define paths for venv python and pip
+VENV_PYTHON="$VENV_DIR/bin/python3"
+VENV_PIP="$VENV_DIR/bin/pip"
+
+echo -e "  ${GREEN}✓${NC} Virtual environment created at $VENV_DIR"
+
 # Install Python dependencies
 show_progress "Installing Python dependencies"
-echo -e "  ${YELLOW}ℹ${NC}  This may take a moment..."
+echo -e "  ${YELLOW}ℹ${NC}  Installing packages into virtual environment..."
+echo -e "  ${CYAN}→${NC} Upgrading pip in venv..."
 
-# Detect Python package manager
-if command -v pip3 &> /dev/null; then
-    PIP_CMD="pip3"
-elif command -v pip &> /dev/null; then
-    PIP_CMD="pip"
-else
-    echo -e "${RED}Error: pip not found. Installing pip...${NC}"
-    case "$OS_ID" in
-        ubuntu|debian|linuxmint|pop)
-            apt-get install -y python3-pip > /dev/null 2>&1
-            ;;
-        fedora|rhel|centos|rocky|almalinux)
-            if command -v dnf &> /dev/null; then
-                dnf install -y python3-pip > /dev/null 2>&1
-            else
-                yum install -y python3-pip > /dev/null 2>&1
-            fi
-            ;;
-        arch|manjaro)
-            pacman -Sy --noconfirm python-pip > /dev/null 2>&1
-            ;;
-        opensuse*|sles)
-            zypper install -y python3-pip > /dev/null 2>&1
-            ;;
-    esac
-    PIP_CMD="pip3"
-fi
+log_verbose "Using venv pip: $VENV_PIP"
 
-# Install Python packages
-echo -e "  ${CYAN}→${NC} Upgrading pip..."
-$PIP_CMD install --upgrade pip > /dev/null 2>&1
+# Upgrade pip in the virtual environment (no --break-system-packages needed in venv)
+$VENV_PIP install --upgrade pip -q || true
 
-# For Arch/Manjaro, use --break-system-packages since system pip installs are restricted
-if [ "$OS_ID" = "arch" ] || [ "$OS_ID" = "manjaro" ]; then
-    echo -e "  ${YELLOW}ℹ${NC}  Using --break-system-packages for Arch/Manjaro"
-    echo -e "  ${CYAN}→${NC} Installing opencv-python, numpy, onnxruntime..."
-    $PIP_CMD install --break-system-packages -q -r requirements.txt 2>&1 | grep -v "already satisfied" || true
-else
-    echo -e "  ${CYAN}→${NC} Installing opencv-python, numpy, onnxruntime..."
-    $PIP_CMD install -q -r requirements.txt 2>&1 | grep -v "already satisfied" || true
-fi
+echo -e "  ${CYAN}→${NC} Installing opencv-python, numpy, onnxruntime..."
+log_verbose "Installing requirements from: $INSTALL_DIR/requirements.txt"
+
+# Install packages in the virtual environment
+$VENV_PIP install -q -r "$INSTALL_DIR/requirements.txt" 2>&1 | grep -v "already satisfied" || true
 
 echo -e "${GREEN}✓ Python dependencies installed${NC}"
 
@@ -331,7 +494,9 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=$INSTALL_DIR
-ExecStart=/usr/bin/python3 $INSTALL_DIR/face_daemon.py
+ExecStart=$VENV_PYTHON $INSTALL_DIR/face_daemon.py
+# To enable verbose logging, uncomment the line below and reload the service:
+# Environment="FACEUNLOCK_VERBOSE=1"
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
@@ -367,12 +532,33 @@ show_progress "Creating command-line tools"
 echo -e "  ${CYAN}→${NC} Creating faceunlock-enroll..."
 cat > "$BIN_DIR/faceunlock-enroll" << 'EOF'
 #!/bin/bash
+
+# Parse verbose flag
+VERBOSE_FLAG=""
+for arg in "$@"; do
+    case $arg in
+        -v|--verbose)
+            VERBOSE_FLAG="--verbose"
+            ;;
+    esac
+done
+
 if [ "$EUID" -ne 0 ]; then
-    echo "Error: Please run as root (sudo faceunlock-enroll <username>)"
+    echo "Error: Please run as root (sudo faceunlock-enroll <username> [-v|--verbose])"
     exit 1
 fi
-if [ -z "$1" ]; then
-    echo "Usage: faceunlock-enroll <username>"
+
+# Get username (first non-flag argument)
+USERNAME=""
+for arg in "$@"; do
+    if [[ ! $arg =~ ^- ]]; then
+        USERNAME="$arg"
+        break
+    fi
+done
+
+if [ -z "$USERNAME" ]; then
+    echo "Usage: faceunlock-enroll <username> [-v|--verbose]"
     exit 1
 fi
 
@@ -396,8 +582,8 @@ export DISPLAY="$DISPLAY"
 export XAUTHORITY="$XAUTHORITY_FILE"
 export QT_QPA_PLATFORM=xcb
 
-# Set Qt to use OpenCV's bundled plugins if available
-CV2_QT_PLUGINS=$(python3 -c 'import cv2, os; print(os.path.join(os.path.dirname(cv2.__file__), "qt", "plugins"))' 2>/dev/null)
+# Set Qt to use OpenCV's bundled plugins if available (using venv python)
+CV2_QT_PLUGINS=$(/opt/faceunlock/venv/bin/python3 -c 'import cv2, os; print(os.path.join(os.path.dirname(cv2.__file__), "qt", "plugins"))' 2>/dev/null)
 if [ -d "$CV2_QT_PLUGINS" ]; then
     export QT_QPA_PLATFORM_PLUGIN_PATH="$CV2_QT_PLUGINS"
 fi
@@ -407,17 +593,17 @@ if command -v xhost &> /dev/null; then
     xhost +local: > /dev/null 2>&1
 fi
 
-# Run as the original user to preserve X11 access for GUI
+# Run as the original user to preserve X11 access for GUI (using venv python)
 if [ -n "$SUDO_USER" ]; then
     sudo -u "$SUDO_USER" DISPLAY="$DISPLAY" XAUTHORITY="$XAUTHORITY_FILE" \
          QT_QPA_PLATFORM=xcb \
          QT_QPA_PLATFORM_PLUGIN_PATH="${QT_QPA_PLATFORM_PLUGIN_PATH:-}" \
-         python3 /opt/faceunlock/enroll.py "$1"
+         /opt/faceunlock/venv/bin/python3 /opt/faceunlock/enroll.py "$USERNAME" $VERBOSE_FLAG
     EXIT_CODE=$?
 else
     QT_QPA_PLATFORM=xcb \
     QT_QPA_PLATFORM_PLUGIN_PATH="${QT_QPA_PLATFORM_PLUGIN_PATH:-}" \
-    python3 /opt/faceunlock/enroll.py "$1"
+    /opt/faceunlock/venv/bin/python3 /opt/faceunlock/enroll.py "$USERNAME" $VERBOSE_FLAG
     EXIT_CODE=$?
 fi
 
@@ -427,9 +613,6 @@ if command -v xhost &> /dev/null; then
 fi
 
 exit $EXIT_CODE
-else
-    python3 /opt/faceunlock/enroll.py "$1"
-fi
 EOF
 chmod +x "$BIN_DIR/faceunlock-enroll"
 

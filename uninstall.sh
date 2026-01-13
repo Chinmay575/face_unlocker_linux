@@ -1,22 +1,48 @@
 #!/bin/bash
 
 # Face Unlock Uninstallation Script
-# Run with: sudo ./uninstall.sh
+# Run with: sudo ./uninstall.sh [-v|--verbose]
 
 set -e
+
+# Parse arguments
+VERBOSE=false
+for arg in "$@"; do
+    case $arg in
+        -v|--verbose)
+            VERBOSE=true
+            set -x  # Enable bash debug mode
+            shift
+            ;;
+    esac
+done
 
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m'
+
+# Logging function
+log_verbose() {
+    if [ "$VERBOSE" = true ]; then
+        echo -e "${CYAN}[VERBOSE]${NC} $1"
+    fi
+}
+
+log_verbose "Verbose logging enabled"
+log_verbose "Running as: $(whoami)"
 
 # Configuration
 INSTALL_DIR="/opt/faceunlock"
 DATA_DIR="/var/lib/faceunlock"
 SYSTEMD_DIR="/etc/systemd/system"
 BIN_DIR="/usr/local/bin"
+
+log_verbose "Install directory: $INSTALL_DIR"
+log_verbose "Data directory: $DATA_DIR"
 
 # Detect OS for PAM module location
 if [ -f /etc/os-release ]; then
@@ -112,10 +138,11 @@ echo -e "${GREEN}✓ Command-line tools removed${NC}\n"
 # Remove installation directory
 echo "Removing application files..."
 echo -e "  → Removing Python files from $INSTALL_DIR"
+echo -e "  → Removing virtual environment from $INSTALL_DIR/venv"
 echo -e "  → Removing AI model (~250MB) from $INSTALL_DIR/models"
 echo -e "  → Removing all application data"
 rm -rf "$INSTALL_DIR"
-echo -e "${GREEN}✓ Application files and AI model removed${NC}\n"
+echo -e "${GREEN}✓ Application files, virtual environment, and AI model removed${NC}\n"
 
 # Ask about user data
 if [ -d "$DATA_DIR" ]; then

@@ -1,22 +1,49 @@
 import os
 import sys
+import logging
+
+# Parse command line arguments for verbose flag
+VERBOSE = '--verbose' in sys.argv or '-v' in sys.argv
+if VERBOSE:
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s - %(levelname)s - %(message)s'
+    )
+else:
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(levelname)s: %(message)s'
+    )
+logger = logging.getLogger(__name__)
+
+logger.debug("Verbose logging enabled")
+logger.debug(f"Python version: {sys.version}")
+logger.debug(f"Arguments: {sys.argv}")
 
 # Set environment variables BEFORE importing cv2 to prevent Qt issues
 # First import cv2 to check for bundled Qt plugins
 import cv2
 
+logger.debug(f"OpenCV version: {cv2.__version__}")
+
 # Use OpenCV's bundled Qt plugins if available
 cv2_path = os.path.dirname(cv2.__file__)
 qt_plugin_path = os.path.join(cv2_path, 'qt', 'plugins')
+logger.debug(f"OpenCV path: {cv2_path}")
+logger.debug(f"Qt plugin path: {qt_plugin_path}")
+
 if os.path.exists(qt_plugin_path):
     os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = qt_plugin_path
+    logger.debug(f"Using OpenCV bundled Qt plugins")
 else:
     # Fallback: unset to let Qt use system plugins
     if 'QT_QPA_PLATFORM_PLUGIN_PATH' in os.environ:
         del os.environ['QT_QPA_PLATFORM_PLUGIN_PATH']
+    logger.debug("Using system Qt plugins")
 
 # Try to use xcb platform for X11
 os.environ['QT_QPA_PLATFORM'] = 'xcb'
+logger.debug("Set Qt platform to xcb")
 import numpy as np
 import argparse
 from pathlib import Path
@@ -28,29 +55,45 @@ MODEL = "/opt/faceunlock/models/arcfaceresnet100-8.onnx"
 REQUIRED_SAMPLES = 5
 MIN_FACE_SIZE = (80, 80)
 
+logger.debug(f"Configuration: SAVE_DIR={SAVE_DIR}, MODEL={MODEL}")
+logger.debug(f"Required samples: {REQUIRED_SAMPLES}, Min face size: {MIN_FACE_SIZE}")
+
 def enroll_user(username, samples=REQUIRED_SAMPLES):
     """Enroll a user's face"""
     
+    logger.debug(f"Starting enrollment for user: {username}")
+    
     # Validate username
     if not username or '/' in username or '\\' in username or username.startswith('.'):
+        logger.error(f"Invalid username: {username}")
         print(f"Error: Invalid username '{username}'")
         return False
     
+    logger.debug(f"Username validation passed: {username}")
+    
     # Create directory
     Path(SAVE_DIR).mkdir(parents=True, exist_ok=True)
+    logger.debug(f"Created/verified directory: {SAVE_DIR}")
     
     # Check if model exists
     if not os.path.exists(MODEL):
+        logger.error(f"Model file not found: {MODEL}")
         print(f"Error: Model file not found: {MODEL}")
         return False
+    
+    logger.debug(f"Model file exists: {MODEL}")
     
     print(f"\n=== Enrolling user: {username} ===\n")
     
     # Initialize camera
+    logger.debug("Initializing camera (device 0)")
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
+        logger.error("Failed to open camera device")
         print("Error: Failed to open camera")
         return False
+    
+    logger.debug("Camera opened successfully")
     print("✓ Camera opened successfully")
     
     # Initialize detector
