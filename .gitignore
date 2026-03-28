@@ -12,20 +12,19 @@ env/
 ENV/
 .Python
 
-# User data and models
+# Models (large binary files)
+*.onnx
 models/
-faceunlock/
-*.npy
+
+# User data
+.face-unlock/
 
 # Build artifacts
 *.o
-*.so
 *.a
-pam_faceunlock.so
 
 # Log files
 *.log
-/var/log/faceunlock.log
 
 # IDE and Editor files
 .vscode/
@@ -44,6 +43,3 @@ test_data/
 tmp/
 temp/
 *.tmp
-
-# Configuration files with sensitive data (optional, uncomment if needed)
-# config.ini
