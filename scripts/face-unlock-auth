@@ -1,0 +1,21 @@
+#!/bin/bash
+# PAM wrapper script for face-unlock authentication.
+# Called by pam_exec.so — exit 0 = success, exit 1 = failure.
+# Installed to /usr/local/bin/face-unlock-auth
+
+INSTALL_DIR="/opt/face-unlock"
+VENV_PYTHON="${INSTALL_DIR}/venv/bin/python3"
+SYSTEM_PYTHON="/usr/bin/python3"
+
+# Use venv python if available, otherwise system python
+if [ -x "$VENV_PYTHON" ]; then
+    PYTHON="$VENV_PYTHON"
+else
+    PYTHON="$SYSTEM_PYTHON"
+fi
+
+# Set PYTHONPATH so face_unlock package is importable
+export PYTHONPATH="${INSTALL_DIR}:${PYTHONPATH}"
+
+# Run auth — exit code propagates to PAM
+exec "$PYTHON" -m face_unlock.auth
