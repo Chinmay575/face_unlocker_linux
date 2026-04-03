@@ -7,7 +7,7 @@ On-demand face authentication for Linux using lightweight ONNX models. Uses PAM 
 Unlike traditional daemon-based approaches, face-unlock runs **on-demand** via `pam_exec.so`:
 
 1. PAM triggers the auth script
-2. Resource guard checks RAM/CPU (< 5ms, stdlib only)
+2. Resource guard checks RAM/CPU (~50ms for CPU sampling, stdlib only)
 3. If resources OK: camera -> face detection -> embedding -> comparison
 4. Returns result, exits immediately -- no lingering process
 
@@ -79,7 +79,8 @@ Config file: `~/.face-unlock/config.yaml`
 Before any inference, the auth script checks system resources:
 - Reads `/proc/meminfo` for available RAM
 - Reads `/proc/stat` for CPU idle percentage
-- Uses only stdlib (zero overhead, < 5ms)
+- Uses only stdlib (zero heavy library overhead)
+- CPU idle sampling takes ~50ms (two `/proc/stat` reads 50ms apart)
 - If resources are low, skips face auth and the password prompt appears with no delay
 
 ## Self-Update

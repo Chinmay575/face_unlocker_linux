@@ -93,37 +93,47 @@ def _trigger_background_update_check(config):
     except Exception:
         pass
 
-    # Fork to background
+    # Double-fork to background: avoids zombie processes (grandchild is
+    # re-parented to init when its parent exits immediately).
     pid = os.fork()
     if pid == 0:
-        # Child process — do the update check
+        # First child — fork again then exit so grandchild is orphaned to init
         try:
-            # Detach from parent
             os.setsid()
-            # Close inherited file descriptors
-            sys.stdin.close()
-            sys.stdout.close()
-            sys.stderr.close()
+            gpid = os.fork()
+            if gpid != 0:
+                # First child exits; grandchild is now owned by init
+                os._exit(0)
 
-            from face_unlock.updater import check_update
-            result = check_update()
+            # Grandchild — do the actual update check
+            try:
+                sys.stdin.close()
+                sys.stdout.close()
+                sys.stderr.close()
 
-            # Touch last-check file
-            os.makedirs(flag_dir, exist_ok=True)
-            with open(last_check_file, "w") as f:
-                f.write(str(time.time()))
+                from face_unlock.updater import check_update
+                result = check_update()
 
-            if result and result.get("update_available"):
-                flag_path = os.path.join(flag_dir, ".update-available")
-                import json
-                with open(flag_path, "w") as f:
-                    json.dump(result, f)
+                # Touch last-check file
+                os.makedirs(flag_dir, exist_ok=True)
+                with open(last_check_file, "w") as f:
+                    f.write(str(time.time()))
 
+                if result and result.get("update_available"):
+                    flag_path = os.path.join(flag_dir, ".update-available")
+                    import json
+                    with open(flag_path, "w") as f:
+                        json.dump(result, f)
+
+            except Exception:
+                pass
+            finally:
+                os._exit(0)
         except Exception:
-            pass
-        finally:
             os._exit(0)
-    # Parent continues immediately — don't wait for child
+
+    # Parent waits only for the short-lived first child (not the grandchild)
+    os.waitpid(pid, 0)
 
 
 def authenticate():

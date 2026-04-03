@@ -87,18 +87,13 @@ class FaceDetector:
             ).astype(np.float32)
             anchor_centers = (anchor_centers * stride).reshape((-1, 2))
 
-            # Two anchors per position for RetinaFace
-            if len(scores.shape) == 4:
-                scores = scores.reshape(-1, 1)
-                bbox_deltas = bbox_deltas.reshape(-1, 4)
-                landmark_deltas = landmark_deltas.reshape(-1, 10)
-            else:
-                scores = scores.reshape(-1, 1)
-                bbox_deltas = bbox_deltas.reshape(-1, 4)
-                landmark_deltas = landmark_deltas.reshape(-1, 10)
+            scores = scores.reshape(-1, 1)
+            bbox_deltas = bbox_deltas.reshape(-1, 4)
+            landmark_deltas = landmark_deltas.reshape(-1, 10)
 
             num_anchors = 2
-            anchor_centers = np.tile(anchor_centers, (1, num_anchors)).reshape((-1, 2))
+            # Repeat each anchor center for the two anchors at that position
+            anchor_centers = np.repeat(anchor_centers, num_anchors, axis=0)
 
             for i in range(len(scores)):
                 conf = float(scores[i, 0])

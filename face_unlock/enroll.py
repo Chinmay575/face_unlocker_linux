@@ -118,7 +118,6 @@ def enroll(samples=5, timeout=30, config=None):
         return False
 
     # Average embeddings and normalize
-    import numpy as np
     final_embedding = np.mean(embeddings, axis=0)
     norm = np.linalg.norm(final_embedding)
     if norm > 0:

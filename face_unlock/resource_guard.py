@@ -1,6 +1,7 @@
 """
 Pre-auth system resource checks. Uses ONLY stdlib — no heavy imports.
-This module must add <5ms latency and import nothing beyond stdlib.
+This module must add minimal latency and import nothing beyond stdlib.
+Note: get_cpu_idle_percent() takes two /proc/stat samples 50ms apart.
 """
 
 import os

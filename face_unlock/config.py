@@ -35,11 +35,14 @@ def load_config():
     if CONFIG_PATH.exists():
         try:
             import yaml
+            import logging
             with open(CONFIG_PATH, "r") as f:
                 user_config = yaml.safe_load(f) or {}
             config.update(user_config)
-        except Exception:
-            pass  # Use defaults on any error
+        except Exception as e:
+            logging.getLogger("face-unlock").warning(
+                f"Could not parse config file {CONFIG_PATH}: {e}. Using defaults."
+            )
 
     return config
 

@@ -163,9 +163,9 @@ USER_DIR="${REAL_HOME}/.face-unlock"
 mkdir -p "$USER_DIR/models"
 chown -R "$REAL_USER:$REAL_USER" "$USER_DIR"
 
-# Create log file
+# Create log file with group-write permission (avoid world-writable)
 touch /var/log/face-unlock.log
-chmod 666 /var/log/face-unlock.log
+chmod 664 /var/log/face-unlock.log
 
 echo -e "\n${GREEN}=== Installation Complete ===${NC}"
 echo -e "\nNext steps:"
